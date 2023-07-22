@@ -27,6 +27,8 @@ players = [{"name":"Varshith",
 
 
 pygame.init()
+textfont = pygame.font.SysFont("Comic Sans MS",14)
+warnFont = pygame.font.SysFont("Comic Sans MS",30)
 
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((800,600))
@@ -202,7 +204,7 @@ def kings_guessed(result):
         print("guessed")
         return(True)
         
-def get_player(players,pid=-1,role=-1):
+def get_player(players,pid=-1,role=-1,name=-1):
     if role == -1:
         for player in players:
             if player['pid'] == pid:
@@ -212,6 +214,12 @@ def get_player(players,pid=-1,role=-1):
         for player in players:
             if player["role"] == role:
                 return(player["name"],player["pid"],player["role"])
+    
+    if pid == -1:
+        for player in players:
+            if player["name"] == name:
+                return(player["name"],player["pid"],player["role"])
+    
 
 def guessed(role,result):
     answer = ""
@@ -292,7 +300,22 @@ def exchange_roles(role1,role2):
     
     # print(pl1[0],pl1[2])
     # print(pl2[0],pl2[2])
- 
+def highlight_player(role):
+    global king,queen,minister,police,thief
+    match role:
+        case "king":
+            pygame.draw.rect(screen,(255,0,0),(king.playerX -32,king.playerY -34,king.image.get_width()+3,king.image.get_height()+10),2)
+        case "queen":
+            pygame.draw.rect(screen,(255,0,0),(queen.playerX -32,queen.playerY -34,queen.image.get_width()+3,queen.image.get_height()+10),2)
+        case "minister":
+            pygame.draw.rect(screen,(255,0,0),(minister.playerX -32,minister.playerY -34,minister.image.get_width()+3,minister.image.get_height()+10),2)
+        case "police":
+            pygame.draw.rect(screen,(255,0,0),(police.playerX -32,police.playerY -34,police.image.get_width()+3,police.image.get_height()+10),2)
+        case "thief":
+            pygame.draw.rect(screen,(255,0,0),(thief.playerX -32,thief.playerY -34,thief.image.get_width()+3,thief.image.get_height()+10),2)
+    
+
+
 def next_role(current_role):
     match current_role:
         case "king":
@@ -306,8 +329,9 @@ def next_role(current_role):
         case "thief":
             answer = "Game Over"
     return answer
-
-
+game_over = False
+start_time = 0
+message_end_time = 0
 moving = False
 next_same_role = False
 guessed_incorrectly = False    
@@ -316,9 +340,11 @@ is_clicked = False
 order  = player_order_sort(players)
 changed_positions = False
 repeat = False
-
+display_warn = False
+warnMessage = warnFont.render("Guessed correctly",1,(255,0,0))
 def player_play(role):
-    global running,next_same_role,guessed_incorrectly,guessed_correctly,is_clicked,order,king,queen,minister,police,thief,changed_positions,moving,repeat
+    # warn = False
+    global running,next_same_role,guessed_incorrectly,guessed_correctly,is_clicked,order,king,queen,minister,police,thief,changed_positions,moving,repeat,message_end_time,display_warn,warnMessage,start_time,game_over
     pl = get_player(players,role=role)
     if not repeat:
         nRole = next_role(role)
@@ -339,13 +365,17 @@ def player_play(role):
             next_same_role = True
             # changed_positionts = True
             moving = False
-
+        
         for event in events:
             if event.type == pygame.QUIT:
                 running = False
                 sys.exit()
+            if event.type == pygame.MOUSEBUTTONUP:
+                if game_over:
+                    sys.exit()
             
             result = cursor.clicked(characters,events)
+            
             if (not is_clicked or next_same_role):
                 if event.type == pygame.MOUSEBUTTONUP and result:
                     is_clicked = True 
@@ -353,6 +383,9 @@ def player_play(role):
                     
                     if guessed(pl[2],result):
                         print("Guessed correctly")
+                        start_time = pygame.time.get_ticks()
+                        warnMessage = warnFont.render("Guessed correctly",1,(255,0,0))
+                        display_warn = True
                         guessed_correctly = True
                         is_clicked=False
                         # nRole = next_role(role)
@@ -360,15 +393,24 @@ def player_play(role):
                             repeat = False
                             player_play(nRole)
                         else:
-                            print("Game Over")
-                            sys.exit()
+                            start_time = pygame.time.get_ticks()
+                            warnMessage = warnFont.render("Game Over",1,(255,0,0))
+                            display_warn = True
+                            game_over = True
+                            
                     elif result == pl[2]:
-                        print("Cannot select your own role")
+                        start_time = pygame.time.get_ticks()
+                        warnMessage = warnFont.render(("Guess the "+nRole+"!!"),1,(255,0,0))
+                        # global display_warn
+                        display_warn = True
                         is_clicked= False
+                        
                     else:
-                        # print(order)
+                        # prirolnt(order)
                         print("GUessed incorrectly, changing roles")
-
+                        start_time = pygame.time.get_ticks()
+                        warnMessage = warnFont.render("Guessed incorrectly,changing roles",1,(255,0,0))
+                        display_warn = True
                         pl = get_player(players,role=role)
                         
                         shift_positions(pl[2],result)
@@ -384,17 +426,48 @@ def player_play(role):
                         print("Guess where is",nRole,"\n")
                         order = player_order_sort(players)
                         repeat = True
+                
         
         
+        player1NameText = textfont.render(get_player(players,role="king")[0],1,[0,0,0])
+        screen.blit(player1NameText,(king.initial_position[0]-28,king.initial_position[1]+50))
+
+        player2NameText = textfont.render(get_player(players,role="queen")[0],1,[0,0,0])
+        screen.blit(player2NameText,(queen.initial_position[0]-28,queen.initial_position[1]+50))
+
+        player3NameText = textfont.render(get_player(players,role="minister")[0],1,[0,0,0])
+        screen.blit(player3NameText,(minister.initial_position[0]-28,minister.initial_position[1]+50))
+
+        player4NameText = textfont.render(get_player(players,role="police")[0],1,[0,0,0])
+        screen.blit(player4NameText,(police.initial_position[0]-28,police.initial_position[1]+50))
+
+        player5NameText = textfont.render(get_player(players,role="thief")[0],1,[0,0,0])
+        screen.blit(player5NameText,(thief.initial_position[0]-28,thief.initial_position[1]+50))
+        current_player = textfont.render(("Current player : "+get_player(players,role=role)[0]),1,(255,0,0))
+        screen.blit(current_player,(300,300))
+        guess = textfont.render(("Guess the "+nRole),1,(255,0,0))
+        screen.blit(guess,(330,330))
+
+        if display_warn:
+            screen.blit(warnMessage,(270,20))
+
+            if pygame.time.get_ticks()-start_time>1500:
+                display_warn = False
+                if game_over:
+                    sys.exit()  
+                
+                
         
         
         characters.update()
         cursor_group.update()
         # events = pygame.event.get()
-        
+        highlight_player(role)
+        # screen.blit(king.rect)
         characters.draw(screen)
         cursor_group.draw(screen)
         pygame.display.update()
+        # pygame.display.flip()
     
 player_play("king")
 
