@@ -264,7 +264,8 @@ def shift_positions(role1,role2):
     
     
 
-def exchange_roles(role1,role2,characters,players):
+def exchange_roles(role1,role2):
+    global characters,players
     for ch in characters:
         if ch.name == role1:
             ch1 = ch
@@ -279,12 +280,15 @@ def exchange_roles(role1,role2,characters,players):
         if player["name"] == pl1[0]:
             
             player["role"] = role2
+            # print(player)
             
             
         if player["name"] == pl2[0]:
             # print(player)
             player["role"] = role1
             # print(player)
+    # print("exchange roles successful")
+     
     
     # print(pl1[0],pl1[2])
     # print(pl2[0],pl2[2])
@@ -302,6 +306,8 @@ def next_role(current_role):
         case "thief":
             answer = "Game Over"
     return answer
+
+
 moving = False
 next_same_role = False
 guessed_incorrectly = False    
@@ -309,13 +315,17 @@ guessed_correctly = False
 is_clicked = False
 order  = player_order_sort(players)
 changed_positions = False
-
+repeat = False
 
 def player_play(role):
-    global running,next_same_role,guessed_incorrectly,guessed_correctly,is_clicked,order,king,queen,minister,police,thief,changed_positions,moving
+    global running,next_same_role,guessed_incorrectly,guessed_correctly,is_clicked,order,king,queen,minister,police,thief,changed_positions,moving,repeat
     pl = get_player(players,role=role)
-    print("Current PLayer",pl[0])
-    print("Role:", pl[2])    
+    if not repeat:
+        nRole = next_role(role)
+        print("Current PLayer",pl[0])
+        print("Role:", pl[2]) 
+        print("Guess where is",nRole,"\n")   
+
     while running:
         
         clock.tick(60)
@@ -327,7 +337,7 @@ def player_play(role):
         if guessed_incorrectly:
             guessed_incorrectly = False
             next_same_role = True
-            changed_positionts = True
+            # changed_positionts = True
             moving = False
 
         for event in events:
@@ -344,12 +354,14 @@ def player_play(role):
                     if guessed(pl[2],result):
                         print("Guessed correctly")
                         guessed_correctly = True
-                        is_clicked = False
-                        nRole = next_role(role)
+                        is_clicked=False
+                        # nRole = next_role(role)
                         if nRole!="thief":
+                            repeat = False
                             player_play(nRole)
                         else:
                             print("Game Over")
+                            sys.exit()
                     elif result == pl[2]:
                         print("Cannot select your own role")
                         is_clicked= False
@@ -358,16 +370,20 @@ def player_play(role):
                         print("GUessed incorrectly, changing roles")
 
                         pl = get_player(players,role=role)
-                        print("Current PLayer",pl[0])
-                        print("Role:", pl[2]) 
+                        
                         shift_positions(pl[2],result)
                         
                         
                         guessed_incorrectly = True
 
-                    if is_clicked and guessed_incorrectly:
-                        exchange_roles(pl[2],result,characters,players)
+                    
+                        exchange_roles(pl[2],result)
+                        pl = get_player(players,role=role)
+                        print("Current PLayer",pl[0])
+                        print("Role:", pl[2])  
+                        print("Guess where is",nRole,"\n")
                         order = player_order_sort(players)
+                        repeat = True
         
         
         
