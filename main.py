@@ -3,38 +3,50 @@ import random
 import sys
 import math
 
+# from pygame.sprite import _Group
+
+
 players = [{"name":"Varshith",
             "role":None,
-            "pid":0},
+            "pid":0,
+            "score":0},
             
             {"name":"Venu",
              "role":None,
-             "pid":1},
+             "pid":1,
+             "score":0},
              
             {"name":"Bhargav",
             "role":None,
-            "pid":2},
+            "pid":2,
+            "score":0},
 
             {"name":"Abhilash",
             "role":None,
-            "pid":3},
+            "pid":3,
+            "score":0},
+            
 
             {"name":"Nagendra",
             "role":None,
-            "pid":4}]
+            "pid":4,
+            "score":0}]
 
-
+no_of_rounds = 3
 
 
 pygame.init()
 textfont = pygame.font.SysFont("Comic Sans MS",14)
 warnFont = pygame.font.SysFont("Comic Sans MS",30)
+winnerFont = pygame.font.SysFont("Comic Sans MS",20)
 
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((800,600))
 
 positions = [(370,450,180),(542.13485,322.6269,108),(473.2437,122.5526,36),(199.80665639212296,328.6022678022882,252),(261.6732958326313,126.24560819148729,324)]
 positions = random.sample(positions,5)
+
+
 
 class Player():
     radius = 180
@@ -88,6 +100,13 @@ class Character(pygame.sprite.Sprite,Player):
 
     def keep_track(self):
         self.rect.center = self.playerX,self.playerY
+    
+    def shuffle(self,position):
+        self.playerX,self.playerY = position[0],position[1]
+        self.rect.center = self.playerX,self.playerY
+        self.initial_position = position[0],position[1]
+        
+
         
         
 
@@ -126,6 +145,7 @@ pos2 = []
 pos3 = []
 pos4 = []
 pos5 = []
+
 def update_positions(positions):
     global pos1,pos2,pos3,pos4,pos5
     pos1 = positions[0]
@@ -141,7 +161,16 @@ pygame.display.set_icon(icon)
 
 running = True
 
-
+def highest_scorer():
+    global players
+    scores = []
+    for player in players:
+        scores.append(player['score'])
+    max_score = max(scores)
+    for player in players:
+        if player["score"] == max_score:
+            return(player["name"])
+    
 
 def player(playerImg,playerX,playerY):
     screen.blit(playerImg,(playerX,playerY))
@@ -161,17 +190,35 @@ queen = Character("queen.png",pos2,"queen")
 minister = Character("saint-patrick.png",pos3,"minister")
 police = Character("police.png",pos4,"police")
 thief = Character("thief.png",pos5,"thief")
-
+print(pos1,pos2,pos3,pos4,pos5)
 # print(thief.target_position)
+def shuffle():
+    global positions,pos1,pos2,pos3,pos4,pos5, king,queen,minister,police,thief
+    
+    random.shuffle(positions)
+    print(positions)
+    update_positions(positions)
+    print(pos1,pos2,pos3,pos4,pos5)
+    king.shuffle(pos1)
+    queen.shuffle(pos2)
+    minister.shuffle(pos3)
+    police.shuffle(pos4)
+    thief.shuffle(pos5)
 
 
 characters = pygame.sprite.Group()
 char_list = king,queen,minister,police,thief
-char_list = random.sample(char_list,5)
+
 characters.add(campfire,king,queen,minister,police,thief)
 
-for i in range(5):
-    players[i]["role"] = char_list[i].name
+
+
+
+def player_role_random():
+    global char_list,players
+    char_list = random.sample(char_list,5)
+    for i in range(5):
+        players[i]["role"] = char_list[i].name
 
 
 #player order
@@ -208,17 +255,17 @@ def get_player(players,pid=-1,role=-1,name=-1):
     if role == -1:
         for player in players:
             if player['pid'] == pid:
-                return(player['name'],player["pid"],player["role"])
+                return(player['name'],player["pid"],player["role"],str(player["score"]))
     
     if pid == -1:
         for player in players:
             if player["role"] == role:
-                return(player["name"],player["pid"],player["role"])
+                return(player["name"],player["pid"],player["role"],str(player["score"]))
     
     if pid == -1:
         for player in players:
             if player["name"] == name:
-                return(player["name"],player["pid"],player["role"])
+                return(player["name"],player["pid"],player["role"],str(player["score"]))
     
 
 def guessed(role,result):
@@ -329,6 +376,24 @@ def next_role(current_role):
         case "thief":
             answer = "Game Over"
     return answer
+
+def add_score(role):
+    global players
+    for player in players:
+        if player["role"] == role:
+            match role:
+                case "king":
+                    player['score']+=1000
+                case "queen":
+                    player['score']+=500
+                case "minister":
+                    player['score']+=300
+                case "police":
+                    player['score']+=100
+                case "thief":
+                    player['score']+=0
+next_round = False
+round_over = False
 game_over = False
 start_time = 0
 message_end_time = 0
@@ -342,9 +407,23 @@ changed_positions = False
 repeat = False
 display_warn = False
 warnMessage = warnFont.render("Guessed correctly",1,(255,0,0))
-def player_play(role):
+winnerMessage = winnerFont.render("Winner is "+highest_scorer()+"!",1,(0,100,100))
+show_winner = False
+
+
+
+player_role_random()
+def player_play(role,round):
     # warn = False
-    global running,next_same_role,guessed_incorrectly,guessed_correctly,is_clicked,order,king,queen,minister,police,thief,changed_positions,moving,repeat,message_end_time,display_warn,warnMessage,start_time,game_over
+    global running,next_same_role,guessed_incorrectly,guessed_correctly,is_clicked,order,king,queen,minister,police,thief,changed_positions,moving,repeat,message_end_time,display_warn,warnMessage,start_time,game_over,round_over,next_round,winnerMessage,show_winner
+    
+    if next_round:
+        shuffle()
+        player_role_random()
+        
+        # player_pos()
+        # character_shuffle()
+
     pl = get_player(players,role=role)
     if not repeat:
         nRole = next_role(role)
@@ -373,7 +452,12 @@ def player_play(role):
             if event.type == pygame.MOUSEBUTTONUP:
                 if game_over:
                     sys.exit()
-            
+            if event.type ==pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    king.playerX,king.playerY = 200,300
+                else:
+                    king.playerX,king.playerY = king.initial_position
+
             result = cursor.clicked(characters,events)
             
             if (not is_clicked or next_same_role):
@@ -383,20 +467,36 @@ def player_play(role):
                     
                     if guessed(pl[2],result):
                         print("Guessed correctly")
+                        add_score(role)
                         start_time = pygame.time.get_ticks()
                         warnMessage = warnFont.render("Guessed correctly",1,(255,0,0))
                         display_warn = True
                         guessed_correctly = True
                         is_clicked=False
+                        
                         # nRole = next_role(role)
                         if nRole!="thief":
                             repeat = False
-                            player_play(nRole)
-                        else:
-                            start_time = pygame.time.get_ticks()
-                            warnMessage = warnFont.render("Game Over",1,(255,0,0))
-                            display_warn = True
-                            game_over = True
+                            next_round = False
+                            player_play(nRole,round)
+                        else:                           
+                            if round==no_of_rounds:
+                                game_over = True
+                                show_winner = True
+                                start_time = pygame.time.get_ticks()
+                                winnerMessage = winnerFont.render("Winner is "+highest_scorer()+"!",1,(0,100,100))
+                                warnMessage = warnFont.render("Game Over",1,(255,0,0))
+                                display_warn = True
+                            else:
+                                # round 
+                                round_over = True
+                                start_time = pygame.time.get_ticks()
+                                warnMessage = warnFont.render("Round "+str(round)+" Finished",1,(255,0,0))
+                                display_warn = True
+                                round+=1
+                                next_round = True
+                                
+                                player_play("king",round)
                             
                     elif result == pl[2]:
                         start_time = pygame.time.get_ticks()
@@ -427,22 +527,43 @@ def player_play(role):
                         order = player_order_sort(players)
                         repeat = True
                 
-        
+        roundDisplay = textfont.render(("Round: "+str(round)),1,[0,0,255])
+        screen.blit(roundDisplay,(50,50))
         
         player1NameText = textfont.render(get_player(players,role="king")[0],1,[0,0,0])
         screen.blit(player1NameText,(king.initial_position[0]-28,king.initial_position[1]+50))
+        # player_pos("king")
+        
+
+        player1NameText = textfont.render("Score : " + get_player(players,role="king")[3],1,[0,255,0])
+        screen.blit(player1NameText,(king.initial_position[0]-28,king.initial_position[1]+70))
 
         player2NameText = textfont.render(get_player(players,role="queen")[0],1,[0,0,0])
         screen.blit(player2NameText,(queen.initial_position[0]-28,queen.initial_position[1]+50))
 
+        # player_pos("queen")
+
+        player2NameText = textfont.render("Score : " + get_player(players,role="queen")[3],1,[0,255,0])
+        screen.blit(player2NameText,(queen.initial_position[0]-28,queen.initial_position[1]+70))
+        # player_pos("minister")
+
         player3NameText = textfont.render(get_player(players,role="minister")[0],1,[0,0,0])
         screen.blit(player3NameText,(minister.initial_position[0]-28,minister.initial_position[1]+50))
+        player3NameText = textfont.render("Score : " + get_player(players,role="minister")[3],1,[0,255,0])
+        screen.blit(player3NameText,(minister.initial_position[0]-28,minister.initial_position[1]+70))
 
         player4NameText = textfont.render(get_player(players,role="police")[0],1,[0,0,0])
         screen.blit(player4NameText,(police.initial_position[0]-28,police.initial_position[1]+50))
+        player4NameText = textfont.render("Score : " + get_player(players,role="police")[3],1,[0,255,0])
+        screen.blit(player4NameText,(police.initial_position[0]-28,police.initial_position[1]+70))
+        # player_pos("police")
 
         player5NameText = textfont.render(get_player(players,role="thief")[0],1,[0,0,0])
         screen.blit(player5NameText,(thief.initial_position[0]-28,thief.initial_position[1]+50))
+        player5NameText = textfont.render("Score : " + get_player(players,role="thief")[3],1,[0,255,0])
+        screen.blit(player5NameText,(thief.initial_position[0]-28,thief.initial_position[1]+70))
+        # player_pos("thief")
+
         current_player = textfont.render(("Current player : "+get_player(players,role=role)[0]),1,(255,0,0))
         screen.blit(current_player,(300,300))
         guess = textfont.render(("Guess the "+nRole),1,(255,0,0))
@@ -450,9 +571,12 @@ def player_play(role):
 
         if display_warn:
             screen.blit(warnMessage,(270,20))
+            if show_winner:
+                screen.blit(winnerMessage,(300,50))
 
             if pygame.time.get_ticks()-start_time>1500:
                 display_warn = False
+                
                 if game_over:
                     sys.exit()  
                 
@@ -461,15 +585,17 @@ def player_play(role):
         
         characters.update()
         cursor_group.update()
-        # events = pygame.event.get()
+        
         highlight_player(role)
-        # screen.blit(king.rect)
+        
         characters.draw(screen)
         cursor_group.draw(screen)
         pygame.display.update()
-        # pygame.display.flip()
-    
-player_play("king")
+        
+    return(round_over)
+
+round = 1
+print(player_play("king",round))
 
 
 
